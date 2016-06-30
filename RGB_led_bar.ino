@@ -1,4 +1,21 @@
-#include "FastLED.h"
+#include <Adafruit_NeoPixel.h>
+#ifdef __AVR__
+  #include <avr/power.h>
+#endif
+
+// Which pin on the Arduino is connected to the NeoPixels?
+// On a Trinket or Gemma we suggest changing this to 1
+#define PIN            3
+
+// How many NeoPixels are attached to the Arduino?
+#define NUMPIXELS      15
+
+// When we setup the NeoPixel library, we tell it how many pixels, and which pin to use to send signals.
+// Note that for older NeoPixel strips you might need to change the third parameter--see the strandtest
+// example for more information on possible values.
+Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
+
+int delayval = 500; // delay for half a second
 
 static int speed = 0;
 static int speed_temp1 = 0;
@@ -11,17 +28,6 @@ static int current_temp2 = 0;
 // give it a name:
 int led = 13;
 
-// How many leds in your strip?
-#define NUM_LEDS 15
-
-// For led chips like Neopixels, which have a data line, ground, and power, you just
-// need to define DATA_PIN.  For led chipsets that are SPI based (four wires - data, clock,
-// ground, and power), like the LPD8806 define both DATA_PIN and CLOCK_PIN
-#define DATA_PIN 3
-
-// Define the array of leds
-CRGB leds[NUM_LEDS];
-
 void setup()
 {
   Serial.begin(115200); //opens serial port, sets data rate to 115200 bps
@@ -29,7 +35,7 @@ void setup()
   // initialize the digital pin as an output.
   pinMode(led, OUTPUT);
   
-  FastLED.addLeds<WS2812B, DATA_PIN>(leds, NUM_LEDS);
+  pixels.begin(); // This initializes the NeoPixel library.
 }
 
 void loop()
@@ -42,55 +48,10 @@ void loop()
 //    Serial.print(" ");
 //  }
   
-  read_serial_data ();
-
-  if (current < 1)
-  {
-    digitalWrite(led, HIGH);   // turn the LED on (HIGH is the voltage level)
-
-    leds[0] = CRGB::Green;
-    leds[1] = CRGB::Green;
-    leds[2] = CRGB::Green;
-    leds[3] = CRGB::Green;
-    leds[4] = CRGB::Green;
-    leds[5] = CRGB::Green;
-    leds[6] = CRGB::Green;
-    leds[7] = CRGB::Green;
-    leds[8] = CRGB::Green;
-    leds[8] = CRGB::Green;
-    leds[9] = CRGB::Green;
-    leds[10] = CRGB::Green;
-    leds[11] = CRGB::Green;
-    leds[12] = CRGB::Green;
-    leds[13] = CRGB::Green;    
-    leds[14] = CRGB::Green;    
-    FastLED.show();
-  }
-  else
-  {
-    digitalWrite(led, LOW);
-    
-    leds[0] = CRGB::Black;
-    leds[1] = CRGB::Black;
-    leds[2] = CRGB::Black;
-    leds[3] = CRGB::Black;
-    leds[4] = CRGB::Black;
-    leds[5] = CRGB::Black;
-    leds[6] = CRGB::Black;
-    leds[7] = CRGB::Black;
-    leds[8] = CRGB::Black;
-    leds[8] = CRGB::Black;
-    leds[9] = CRGB::Black;
-    leds[10] = CRGB::Black;
-    leds[11] = CRGB::Black;
-    leds[12] = CRGB::Black;
-    leds[13] = CRGB::Black;    
-    leds[14] = CRGB::Black;    
-    FastLED.show();
-  }
+  read_serial_data_and_process();
 }
 
-void read_serial_data (void)
+void read_serial_data_and_process (void)
 {
   static unsigned int state = 0;
   int data;
@@ -256,6 +217,8 @@ void read_serial_data (void)
         
         speed = speed_temp2;
         current = current_temp2;
+        
+        update_LEDs ();
       }
       else state = 0;
       break;
@@ -266,4 +229,53 @@ void read_serial_data (void)
     }
   }
 }
+
+void update_LEDs (void)
+{
+  if (current < 1)
+  {
+    digitalWrite(led, HIGH);   // turn the LED on (HIGH is the voltage level)
+
+    pixels.setPixelColor(0, pixels.Color(150,0,0));
+    pixels.setPixelColor(1, pixels.Color(150,0,0));
+    pixels.setPixelColor(2, pixels.Color(150,0,0));
+    pixels.setPixelColor(3, pixels.Color(150,0,0));
+    pixels.setPixelColor(4, pixels.Color(150,0,0));
+    pixels.setPixelColor(5, pixels.Color(150,0,0));
+    pixels.setPixelColor(6, pixels.Color(150,0,0));
+    pixels.setPixelColor(7, pixels.Color(150,0,0));
+    pixels.setPixelColor(8, pixels.Color(150,0,0));
+    pixels.setPixelColor(9, pixels.Color(150,0,0));
+    pixels.setPixelColor(10, pixels.Color(150,0,0));
+    pixels.setPixelColor(11, pixels.Color(150,0,0));
+    pixels.setPixelColor(12, pixels.Color(150,0,0));
+    pixels.setPixelColor(13, pixels.Color(150,0,0));
+    pixels.setPixelColor(14, pixels.Color(150,0,0));
+    pixels.setPixelColor(15, pixels.Color(150,0,0));
+    pixels.show(); // This sends the updated pixel color to the hardware.
+  }
+  else
+  {
+    digitalWrite(led, LOW);
+    
+    pixels.setPixelColor(0, pixels.Color(0,0,0));
+    pixels.setPixelColor(1, pixels.Color(0,0,0));
+    pixels.setPixelColor(2, pixels.Color(0,0,0));
+    pixels.setPixelColor(3, pixels.Color(0,0,0));
+    pixels.setPixelColor(4, pixels.Color(0,0,0));
+    pixels.setPixelColor(5, pixels.Color(0,0,0));
+    pixels.setPixelColor(6, pixels.Color(0,0,0));
+    pixels.setPixelColor(7, pixels.Color(0,0,0));
+    pixels.setPixelColor(8, pixels.Color(0,0,0));
+    pixels.setPixelColor(9, pixels.Color(0,0,0));
+    pixels.setPixelColor(10, pixels.Color(0,0,0));
+    pixels.setPixelColor(11, pixels.Color(0,0,0));
+    pixels.setPixelColor(12, pixels.Color(0,0,0));
+    pixels.setPixelColor(13, pixels.Color(0,0,0));
+    pixels.setPixelColor(14, pixels.Color(0,0,0)); 
+    pixels.setPixelColor(15, pixels.Color(0,0,0)); 
+    pixels.show(); // This sends the updated pixel color to the hardware.
+  }
+}
+
 
