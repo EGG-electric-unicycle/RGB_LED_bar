@@ -1,3 +1,6 @@
+#pragma GCC push_options
+#pragma GCC optimize ("O0")
+
 #include <Adafruit_NeoPixel.h>
 #ifdef __AVR__
   #include <avr/power.h>
@@ -19,6 +22,13 @@ Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ80
 // give it a name:
 int led = 13;
 
+struct Data_EUC {
+   int voltage;
+   int speed;
+   int current;
+   int flag;
+} data_euc;  
+
 void setup()
 {
   Serial.begin(115200); //opens serial port, sets data rate to 115200 bps
@@ -29,14 +39,10 @@ void setup()
   pixels.begin(); // This initializes the NeoPixel library.
 }
 
-void read_serial_data (int *speed, int *current)
+void read_serial_data (void)
 {
-  static unsigned int state = 0;
-  int data;
-  static int speed_temp1 = 0;
-  static int speed_temp2 = 0;
-  static int current_temp1 = 0;
-  static int current_temp2 = 0;
+  volatile static unsigned int state = 0;
+  volatile int data;
   
   // read data only when you receive data:
   if (Serial.available() > 0)
@@ -115,12 +121,12 @@ void read_serial_data (int *speed, int *current)
       // next 2 bytes are speed
       case 9:   
       state++;
-      speed_temp1 = (data << 8);
+      data_euc.speed = (data << 8);
       break;
        
       case 10:   
       state++;
-      speed_temp2 = speed_temp1 | data;
+      data_euc.speed |= data;
       break;      
 
       // next 4 bytes are trip distance
@@ -143,19 +149,19 @@ void read_serial_data (int *speed, int *current)
       // next 2 bytes are current
       case 15:   
       state++;
-      current_temp1 = (data << 8);
+      data_euc.current = (data << 8);
       break;
      
       case 16:   
       state++;
-      current_temp2 = current_temp1 | data;      
+      data_euc.current |= data;
       break;
       
       // next 2 bytes are temperature
       case 17:   
       state++;
       break;
-     
+
       case 18:   
       state++;
       break;
@@ -196,14 +202,12 @@ void read_serial_data (int *speed, int *current)
       if (data == 0)
       {
         state = 0;
-        
-        *speed = speed_temp2;
-        *current = current_temp2;
+        data_euc.flag = 1;
       }
       else state = 0;
       break;
       
-      default:
+      default:         
       state = 0;
       break;
     }
@@ -228,27 +232,6 @@ void led_brake (void)
   pixels.setPixelColor(13, pixels.Color(150,0,0));
   pixels.setPixelColor(14, pixels.Color(150,0,0));
   pixels.setPixelColor(15, pixels.Color(150,0,0));
-  pixels.show(); // This sends the updated pixel color to the hardware.
-}
-
-void led_clear (void)
-{
-  pixels.setPixelColor(0, pixels.Color(0,0,0));
-  pixels.setPixelColor(1, pixels.Color(0,0,0));
-  pixels.setPixelColor(2, pixels.Color(0,0,0));
-  pixels.setPixelColor(3, pixels.Color(0,0,0));
-  pixels.setPixelColor(4, pixels.Color(0,0,0));
-  pixels.setPixelColor(5, pixels.Color(0,0,0));
-  pixels.setPixelColor(6, pixels.Color(0,0,0));
-  pixels.setPixelColor(7, pixels.Color(0,0,0));
-  pixels.setPixelColor(8, pixels.Color(0,0,0));
-  pixels.setPixelColor(9, pixels.Color(0,0,0));
-  pixels.setPixelColor(10, pixels.Color(0,0,0));
-  pixels.setPixelColor(11, pixels.Color(0,0,0));
-  pixels.setPixelColor(12, pixels.Color(0,0,0));
-  pixels.setPixelColor(13, pixels.Color(0,0,0));
-  pixels.setPixelColor(14, pixels.Color(0,0,0));
-  pixels.setPixelColor(15, pixels.Color(0,0,0));
   pixels.show(); // This sends the updated pixel color to the hardware.
 }
 
@@ -294,34 +277,45 @@ void pixels_step (void)
 
 void loop()
 {  
-  static unsigned long next_step_time = 0;
-  static int speed = 0;
-  static int current = 0;
+  volatile static unsigned long next_step_time = 0;
+  static int speed;
+  static int brake;
 
-  read_serial_data (&speed, &current);
+  read_serial_data ();
 
-  Serial.print (speed);
-  Serial.print ("  ");
-  Serial.print (current);
-  Serial.print ("\n");
-
-  if (current < 1)
+  if (data_euc.flag == 1)
   {
-    led_brake ();
+    data_euc.flag = 0;
+    speed = data_euc.speed;
+    
+    // current = data_euc.current; // THIS BREAKS, seems there is a bug on Arduino compiler
+
+    if (data_euc.current < 1)
+    {
+      led_brake ();
+      brake = 1;
+    }
+    else
+    {
+      brake = 0;
+    }
   }
-  else
+
+  if (brake == 0)
   {
-    if (speed > 50)
+    if (speed > 30)
     {
       if (speed > 1000) speed = 2000;
       
       // verify if we need to make next step
       if (millis () > next_step_time)
       {
-        next_step_time = millis() + ((unsigned long) 14000 / (unsigned long) speed);
+        next_step_time = millis() + (14000 / speed);
         pixels_step ();
       }
     }
   }
 }
+
+#pragma GCC pop_options
 
