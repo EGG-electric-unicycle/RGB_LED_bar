@@ -8,7 +8,7 @@
 
 // Which pin on the Arduino is connected to the NeoPixels?
 // On a Trinket or Gemma we suggest changing this to 1
-#define PIN            3
+#define PIN            6
 
 // How many NeoPixels are attached to the Arduino?
 #define NUMPIXELS      15
@@ -28,6 +28,15 @@ struct Data_EUC {
    int current;
    int flag;
 } data_euc;  
+
+int colors [5][3] = 
+{
+  {0, 100,  0}, // green
+  {0,  0, 100},  // blue
+  {50,  50, 0}, // yellow
+  {50,  0, 50}, // purple
+  {0,  50, 50} // cyan
+};
 
 void setup()
 {
@@ -239,6 +248,7 @@ void pixels_step (void)
 {
   static unsigned int step = 0;
   unsigned int next_step = 0;
+  static long random_color_index = 0;
   
   pixels.setPixelColor(0, pixels.Color(0,0,0));
   pixels.setPixelColor(1, pixels.Color(0,0,0));
@@ -258,17 +268,29 @@ void pixels_step (void)
   pixels.setPixelColor(15, pixels.Color(0,0,0)); 
   
   if (step > 0) step--;
-  else step = NUMPIXELS - 1;
+  else
+  {
+    step = NUMPIXELS - 1;
+    random_color_index = random(0, 4);
+  }
   next_step = step;
-  pixels.setPixelColor(step, pixels.Color(150,150,0));
+  pixels.setPixelColor(step, pixels.Color(colors[random_color_index][0], colors[random_color_index][1], colors[random_color_index][2]));
 
   if (step > 0) step--;
-  else step = NUMPIXELS - 1;
-  pixels.setPixelColor(step, pixels.Color(150,0,150));  
+  else
+  {
+    step = NUMPIXELS - 1;
+    random_color_index = random(0, 4);
+  }
+  pixels.setPixelColor(step, pixels.Color(colors[random_color_index][0], colors[random_color_index][1], colors[random_color_index][2]));
 
   if (step > 0) step--;
-  else step = NUMPIXELS - 1;
-  pixels.setPixelColor(step, pixels.Color(0,150,150));
+  else
+  {
+    step = NUMPIXELS - 1;
+    random_color_index = random(0, 4);
+  }
+  pixels.setPixelColor(step, pixels.Color(colors[random_color_index][0], colors[random_color_index][1], colors[random_color_index][2]));
  
   step = next_step;
  
@@ -290,7 +312,7 @@ void loop()
     
     // current = data_euc.current; // THIS BREAKS, seems there is a bug on Arduino compiler
 
-    if (data_euc.current < 1)
+    if (data_euc.current < 10)
     {
       led_brake ();
       brake = 1;
@@ -303,14 +325,14 @@ void loop()
 
   if (brake == 0)
   {
-    if (speed > 30)
+    if (speed > 0)
     {
-      if (speed > 1000) speed = 2000;
+      if (speed > 2000) speed = 2000;
       
       // verify if we need to make next step
       if (millis () > next_step_time)
       {
-        next_step_time = millis() + (14000 / speed);
+        next_step_time = millis() + ((NUMPIXELS * 500) / speed);
         pixels_step ();
       }
     }
